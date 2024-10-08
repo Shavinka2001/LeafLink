@@ -47,7 +47,7 @@ const Dashboard = () => {
       {/* Dashboard Header */}
       <header className="bg-white shadow-md rounded-lg p-6 mb-6 flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold text-gray-800">LeafLink Manager Dashboard</h2>
+          <h2 className="text-3xl font-bold text-gray-800">LeafLink Manager Dashboard.</h2>
           
         </div>
       </header>
