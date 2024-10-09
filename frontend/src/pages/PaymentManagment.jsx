@@ -22,9 +22,6 @@ const PaymentManagement = () => {
   const [editMode, setEditMode] = useState(false);
   const [editIndex, setEditIndex] = useState(null);
 
-  console.log(payments);
-  
-
   // Fetch payments from the backend
   useEffect(() => {
     const fetchPayments = async () => {
@@ -116,18 +113,45 @@ const PaymentManagement = () => {
 
     // Validation rules
     const { cardHolder, cardNumber, expiryDate, cvv, totalPrice, cartItems } = formData;
+    
+    // Check if any field is empty
     if (!cardHolder || !cardNumber || !expiryDate || !cvv || !totalPrice || !cartItems.length) {
       toast.error("Please fill out all fields.");
       return;
     }
 
+    // Validate card number (should be 16 digits)
+    if (!/^\d{16}$/.test(cardNumber)) {
+      toast.error("Card number should be 16 digits long.");
+      return;
+    }
+
+    // Validate CVV (should be 3 digits)
+    if (!/^\d{3}$/.test(cvv)) {
+      toast.error("CVV should be 3 digits long.");
+      return;
+    }
+
+    // Validate expiry date (should be in MM/YY format)
+    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiryDate)) {
+      toast.error("Expiry date should be in MM/YY format.");
+      return;
+    }
+
+    // Validate total price (should be a positive number)
+    if (totalPrice <= 0) {
+      toast.error("Total price should be a positive number.");
+      return;
+    }
+
+    
     try {
       if (editMode) {
-        // Update payment
+        // Update payment with ID preserved
         const updatedPayment = { ...formData };
         await axios.put(`/payment/${payments[editIndex]._id}`, updatedPayment);
         const updatedPayments = [...payments];
-        updatedPayments[editIndex] = { ...updatedPayment, _id: payments[editIndex]._id }; // Preserve ID
+        updatedPayments[editIndex] = { ...updatedPayment, _id: payments[editIndex]._id };
         setPayments(updatedPayments);
         toast.success("Payment updated successfully.");
       } else {
@@ -202,8 +226,6 @@ const PaymentManagement = () => {
 
       {/* Search Bar and Add Payment Button */}
       <div className="flex justify-between items-center mb-4">
-        
-        
         <div className="flex items-center border border-gray-300 rounded shadow-md p-2">
           <FaSearch className="text-gray-500 mr-2" />
           <input
@@ -214,6 +236,7 @@ const PaymentManagement = () => {
             className="outline-none"
           />
         </div>
+        
       </div>
 
       {/* Payment Table */}
@@ -224,7 +247,6 @@ const PaymentManagement = () => {
               <th className="border border-gray-300 p-2">Cardholder Name</th>
               <th className="border border-gray-300 p-2">Card Number</th>
               <th className="border border-gray-300 p-2">Expiry Date</th>
-              <th className="border border-gray-300 p-2">CVV</th>
               <th className="border border-gray-300 p-2">Total Price</th>
               <th className="border border-gray-300 p-2">Cart Items</th>
               <th className="border border-gray-300 p-2">Status</th>
@@ -233,25 +255,24 @@ const PaymentManagement = () => {
           </thead>
           <tbody>
             {filteredPayments.map((payment, index) => (
-              <tr key={payment._id}>
+              <tr key={payment._id} className="text-center">
                 <td className="border border-gray-300 p-2">{payment.cardHolder}</td>
                 <td className="border border-gray-300 p-2">{payment.cardNumber}</td>
                 <td className="border border-gray-300 p-2">{payment.expiryDate}</td>
-                <td className="border border-gray-300 p-2">{payment.cvv}</td>
                 <td className="border border-gray-300 p-2">{payment.totalPrice}</td>
                 <td className="border border-gray-300 p-2">
                   {payment.cartItems.map((item, i) => (
                     <div key={i}>
-                      <strong>{item.Itemname}</strong> - ${item.price} x {item.quantity}
+                      {item.Itemname} - ${item.price} x {item.quantity}
                     </div>
                   ))}
                 </td>
                 <td className="border border-gray-300 p-2">{payment.status}</td>
-                <td className="border border-gray-300 p-2">
-                  <button className="text-blue-500 hover:underline" onClick={() => openModal(index)}>
+                <td className="border border-gray-300 p-2 flex justify-center items-center space-x-4">
+                  <button className="bg-blue-500 text-white px-2 py-1 rounded shadow-md hover:bg-blue-600" onClick={() => openModal(index)}>
                     <FaEdit />
                   </button>
-                  <button className="text-red-500 hover:underline ml-2" onClick={() => handleDelete(payment._id)}>
+                  <button className="bg-red-500 text-white px-2 py-1 rounded shadow-md hover:bg-red-600" onClick={() => handleDelete(payment._id)}>
                     <FaTrashAlt />
                   </button>
                 </td>
@@ -261,139 +282,135 @@ const PaymentManagement = () => {
         </table>
       </div>
 
-      <div className="flex justify-end mt-4">
-        <button
-          className="bg-blue-500 text-white py-2 px-4 rounded-lg shadow-md hover:bg-blue-600 transition duration-300"
-          onClick={generatePDF}
-        >
-          <FaFilePdf /> Download PDF
-        </button>
-      </div>
+      {/* Download PDF Button */}
+      <button
+        className="mt-4 bg-green-500 text-white py-2 px-4 rounded-lg shadow-md hover:bg-red-600 transition duration-300"
+        onClick={generatePDF}
+      >
+        <FaFilePdf /> Download PDF
+      </button>
 
-      {/* Modal for Adding/Editing Payments */}
+      {/* Add/Edit Payment Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg shadow-md w-1/3">
-            <h3 className="text-xl font-semibold mb-4">{editMode ? "Edit Payment" : "Add Payment"}</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h2 className="text-2xl font-bold mb-4">{editMode ? "Edit Payment" : "Add Payment"}</h2>
             <form onSubmit={handleSubmit}>
-              <input
-                type="text"
-                name="cardHolder"
-                value={formData.cardHolder}
-                onChange={handleChange}
-                placeholder="Cardholder Name"
-                className="w-full p-2 border border-gray-300 rounded mb-4"
-                required
-              />
-              <input
-                type="text"
-                name="cardNumber"
-                value={formData.cardNumber}
-                onChange={handleChange}
-                placeholder="Card Number"
-                className="w-full p-2 border border-gray-300 rounded mb-4"
-                required
-              />
-              <input
-                type="text"
-                name="expiryDate"
-                value={formData.expiryDate}
-                onChange={handleChange}
-                placeholder="Expiry Date (MM/YY)"
-                className="w-full p-2 border border-gray-300 rounded mb-4"
-                required
-              />
-              <input
-                type="text"
-                name="cvv"
-                value={formData.cvv}
-                onChange={handleChange}
-                placeholder="CVV"
-                className="w-full p-2 border border-gray-300 rounded mb-4"
-                required
-              />
-              <input
-                type="number"
-                name="totalPrice"
-                value={formData.totalPrice}
-                onChange={handleChange}
-                placeholder="Total Price"
-                className="w-full p-2 border border-gray-300 rounded mb-4"
-                required
-              />
-              <h4 className="font-semibold mb-2">Cart Items</h4>
-              {formData.cartItems.map((item, index) => (
-                <div key={index} className="flex mb-2">
+              {/* Form Fields */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium">Cardholder Name</label>
+                <input
+                  type="text"
+                  name="cardHolder"
+                  value={formData.cardHolder}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded p-2"
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium">Card Number</label>
+                <input
+                  type="text"
+                  name="cardNumber"
+                  value={formData.cardNumber}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded p-2"
+                  required
+                />
+              </div>
+              <div className="flex justify-between space-x-4 mb-4">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium">Expiry Date</label>
                   <input
                     type="text"
-                    name="itemName"
-                    value={item.Itemname}
-                    onChange={(e) => handleCartItemsChange(e, index)}
-                    placeholder="Item Name"
-                    className="w-1/2 p-2 border border-gray-300 rounded mr-2"
+                    name="expiryDate"
+                    value={formData.expiryDate}
+                    onChange={handleChange}
+                    placeholder="MM/YY"
+                    className="w-full border border-gray-300 rounded p-2"
                     required
                   />
-                  <input
-                    type="number"
-                    name="price"
-                    value={item.price}
-                    onChange={(e) => handleCartItemsChange(e, index)}
-                    placeholder="Price"
-                    className="w-1/4 p-2 border border-gray-300 rounded mr-2"
-                    required
-                  />
-                  <input
-                    type="number"
-                    name="quantity"
-                    value={item.quantity}
-                    onChange={(e) => handleCartItemsChange(e, index)}
-                    placeholder="Quantity"
-                    className="w-1/4 p-2 border border-gray-300 rounded mr-2"
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="bg-red-500 text-white p-2 rounded hover:bg-red-600"
-                    onClick={() => removeCartItem(index)}
-                  >
-                    Remove
-                  </button>
                 </div>
-              ))}
-              <button
-                type="button"
-                className="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 mb-4"
-                onClick={addCartItem}
-              >
-                Add Cart Item
-              </button>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className="w-full p-2 border border-gray-300 rounded mb-4"
-                required
-              >
-                <option value="Payment Done">Payment Done</option>
-                <option value="Proceed to Delivery">Proceed to Delivery</option>
-                <option value="Completed">Completed</option>
-              </select>
-              <div className="flex justify-between">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium">CVV</label>
+                  <input
+                    type="text"
+                    name="cvv"
+                    value={formData.cvv}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded p-2"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium">Total Price</label>
+                <input
+                  type="number"
+                  name="totalPrice"
+                  value={formData.totalPrice}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded p-2"
+                  required
+                />
+              </div>
+              {/* Cart Items Section */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Cart Items</label>
+                {formData.cartItems.map((item, index) => (
+                  <div key={index} className="flex items-center space-x-2 mb-2">
+                    <input
+                      type="text"
+                      name="itemName"
+                      value={item.Itemname}
+                      onChange={(e) => handleCartItemsChange(e, index)}
+                      placeholder="Item Name"
+                      className="flex-1 border border-gray-300 rounded p-2"
+                      required
+                    />
+                    
+                    <input
+                      type="number"
+                      name="quantity"
+                      value={item.quantity}
+                      onChange={(e) => handleCartItemsChange(e, index)}
+                      placeholder="Qty"
+                      className="w-20 border border-gray-300 rounded p-2"
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="text-red-500 hover:text-red-700"
+                      onClick={() => removeCartItem(index)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
                 <button
                   type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-300"
+                  className="mt-2 bg-blue-500 text-white py-1 px-3 rounded-lg shadow-md hover:bg-blue-600 transition duration-300"
+                  onClick={addCartItem}
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition duration-300"
-                >
-                  {editMode ? "Update" : "Add"}
+                  Add Item
                 </button>
               </div>
+              {/* Save Button */}
+              <button
+                type="submit"
+                className="bg-green-500 text-white py-2 px-4 rounded-lg shadow-md hover:bg-green-600 transition duration-300 w-full"
+              >
+                {editMode ? "Update Payment" : "Save Payment"}
+              </button>
             </form>
+            {/* Close Modal Button */}
+            <button
+              className="mt-4 bg-red-500 text-white py-2 px-4 rounded-lg shadow-md hover:bg-red-600 transition duration-300 w-full"
+              onClick={() => setModalOpen(false)}
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}

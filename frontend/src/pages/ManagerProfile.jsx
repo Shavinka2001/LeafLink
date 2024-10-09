@@ -18,8 +18,8 @@ const ManagerProfile = () => {
       {/* Sidebar Navigation */}
       <aside className="w-64 bg-gray-800 text-white flex flex-col">
         {/* Logo and Title */}
-        <div className="py-6 px-4 bg-gray-900 text-center text-xl font-bold">
-          <h1 className="text-green-600">LeafLink</h1>
+        <div className="py-6 px-4 bg-gray-800 text-center text-xl font-bold">
+          <h1 className="text-green-600 text-3xl">LeafLink</h1>
         </div>
 
         {/* Navigation Links */}
