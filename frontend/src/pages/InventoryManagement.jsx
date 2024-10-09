@@ -6,6 +6,7 @@ import { FaSearch, FaPlus, FaEdit, FaTrashAlt, FaFilePdf } from 'react-icons/fa'
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+
 const InventoryManagement = () => {
   const [items, setItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,6 +65,34 @@ const InventoryManagement = () => {
     setSearchQuery(e.target.value.toLowerCase());
   };
 
+  const validateForm = () => {
+    const errors = {};
+    const { Itemname, Discription, quantity, price } = formData;
+
+    // Validate Item Name
+    if (!Itemname.trim()) {
+      errors.Itemname = 'Item Name is required.';
+    }
+
+    // Validate Description
+    if (!Discription.trim()) {
+      errors.Discription = 'Description is required.';
+    }
+
+    // Validate Quantity
+    if (!quantity || isNaN(quantity) || parseInt(quantity) <= 0) {
+      errors.quantity = 'Quantity should be a positive number.';
+    }
+
+    // Validate Price to ensure it is a float with exactly two decimal points
+    const priceRegex = /^\d+(\.\d{2})$/; // Regex for a positive float with exactly two decimal places
+    if (!price || !priceRegex.test(price)) {
+      errors.price = 'Price should be a positive number formatted to two decimal points (e.g., 13.00).';
+    }
+
+    return errors;
+  };
+
   const filteredItems = items.filter(
     (item) =>
       item.Itemname.toLowerCase().includes(searchQuery) ||
@@ -73,9 +102,11 @@ const InventoryManagement = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.Itemname || !formData.Discription || !formData.quantity || !formData.price || !formData.image) {
-      toast.error('Please fill out all fields.');
-      return;
+    const errors = validateForm();
+    if (Object.keys(errors).length) {
+      // If there are errors, don't submit and show the errors
+      Object.values(errors).forEach((error) => toast.error(error));
+      return; // Exit the function if there are validation errors
     }
 
     try {
@@ -84,15 +115,15 @@ const InventoryManagement = () => {
         const updatedItems = [...items];
         updatedItems[editIndex] = { ...formData, _id: items[editIndex]._id };
         setItems(updatedItems);
-        toast.success('Item updated successfully.');
+        toast.success('Item updated successfully.'); // Show success message only after successful update
       } else {
         const response = await axios.post('/item', formData);
         setItems((prev) => [...prev, response.data]);
-        toast.success('Item added successfully.');
+        toast.success('Item added successfully.'); // Show success message only after successful addition
       }
       setModalOpen(false);
     } catch (error) {
-      toast.error('Failed to save the item.');
+      toast.error('Failed to save the item.'); // Show error message if the request fails
     }
   };
 
@@ -109,32 +140,62 @@ const InventoryManagement = () => {
 
   const generatePDF = () => {
     const doc = new jsPDF();
+  
+    // Add logo to the PDF (replace 'data:image/png;base64,...' with your actual base64 image string)
+    const logo = '..src'; // Insert your base64 logo here
+    doc.addImage(logo, 'PNG', 14, 10, 40, 20); // Adjust position (x, y) and size (width, height)
+  
+    // Set the title and company details
     doc.setFontSize(18);
-    doc.text('Inventory Management', 14, 22);
-
-    const input = document.getElementById('inventory-table');
-    html2canvas(input, { scale: 2 }).then((canvas) => {
-      const imgData = canvas.toDataURL('image/png');
-      const imgWidth = 190;
-      const pageHeight = 295;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 10;
-
-      doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        doc.addPage();
-        doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
-      doc.save('inventory_management.pdf');
-      toast.success('PDF downloaded successfully.');
+    doc.text('Inventory Management', 14, 35); // Title position
+  
+    // Company information
+    doc.setFontSize(16);
+    doc.text('Leaflink Tea Factory', 14, 50); // Company name
+    doc.text('Urubokka', 14, 55); // Address line 1
+    doc.text('Matara', 14, 60); // Address line 2
+    
+    // Add the date
+    const date = new Date().toLocaleDateString(); // Get current date
+    doc.text(`Date: ${date}`, 14, 65); // Date position
+  
+    // Create table headers
+    const headers = [['Item Name', 'Description', 'Quantity', 'Price']];
+    
+    // Extract data from filteredItems
+    const data = filteredItems.map(item => [
+      item.Itemname,
+      item.Discription,
+      item.quantity,
+      item.price,
+    ]);
+  
+    // Add headers and data to the PDF
+    doc.autoTable({
+      head: headers,
+      body: data,
+      startY: 70, // Adjust starting position to leave space for company info
+      styles: { 
+        cellPadding: 3, // Reduce padding for smaller table
+        fontSize: 9, // Reduce font size for a smaller table
+        overflow: 'linebreak', // Ensure line breaks in cells if needed
+        minCellHeight: 8, // Set minimum cell height for better readability
+      },
+      columnStyles: {
+        0: { halign: 'left', cellWidth: 30 }, // Adjust width for better alignment
+        1: { halign: 'left', cellWidth: 60 }, // Adjust width for better alignment
+        2: { halign: 'center', cellWidth: 25 }, // Adjust width for better alignment
+        3: { halign: 'right', cellWidth: 25 }, // Adjust width for better alignment
+      },
+      margin: { top: 30, left: 14, right: 14 }, // Set margins to fit the page
     });
+  
+    // Save the PDF
+    doc.save('inventory_management.pdf');
+    toast.success('PDF downloaded successfully.');
   };
+  
+  
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -187,7 +248,7 @@ const InventoryManagement = () => {
                     className="w-16 h-16 object-cover rounded"
                   />
                 </td>
-                <td className="py-4 px-4  border-gray-300 flex items-center gap-2">
+                <td className="py-4 px-4 border-b border-gray-300 flex items-center gap-2">
                   <button
                     className="text-blue-500 hover:text-blue-700 transition duration-300"
                     onClick={() => openModal(items.findIndex((itm) => itm._id === item._id))}
@@ -207,86 +268,91 @@ const InventoryManagement = () => {
         </table>
       </div>
 
-      <div className="mt-4 text-right">
-        <button
-          className="bg-red-500 text-white py-2 px-4 rounded-lg shadow-md flex items-center gap-2 hover:bg-red-600 transition duration-300"
-          onClick={generatePDF}
-        >
-          <FaFilePdf /> Download PDF
-        </button>
-      </div>
+      <button
+        className="mt-4 bg-blue-500 text-white py-2 px-4 rounded-lg shadow-md flex items-center gap-2 hover:bg-blue-600 transition duration-300"
+        onClick={generatePDF}
+      >
+        <FaFilePdf /> Download PDF
+      </button>
 
-      {/* Modal for adding/editing item */}
       {modalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className="bg-white p-5 rounded-lg shadow-md">
-            <h3 className="text-xl font-bold mb-4">{editMode ? 'Edit Item' : 'Add New Item'}</h3>
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h3 className="text-xl font-semibold mb-4">{editMode ? 'Update Item' : 'Add New Item'}</h3>
             <form onSubmit={handleSubmit}>
               <div className="mb-4">
-                <label className="block mb-1">Item Name:</label>
+                <label className="block mb-2">Item Name</label>
                 <input
                   type="text"
                   name="Itemname"
                   value={formData.Itemname}
                   onChange={handleChange}
+                  className="border border-gray-300 rounded px-3 py-2 w-full"
                   required
-                  className="border border-gray-300 p-2 w-full"
                 />
               </div>
               <div className="mb-4">
-                <label className="block mb-1">Description:</label>
+                <label className="block mb-2">Description</label>
                 <input
                   type="text"
                   name="Discription"
                   value={formData.Discription}
                   onChange={handleChange}
+                  className="border border-gray-300 rounded px-3 py-2 w-full"
                   required
-                  className="border border-gray-300 p-2 w-full"
                 />
               </div>
               <div className="mb-4">
-                <label className="block mb-1">Quantity:</label>
+                <label className="block mb-2">Quantity</label>
                 <input
-                  type="text"
+                  type="number"
                   name="quantity"
                   value={formData.quantity}
                   onChange={handleChange}
+                  className="border border-gray-300 rounded px-3 py-2 w-full"
                   required
-                  className="border border-gray-300 p-2 w-full"
                 />
               </div>
               <div className="mb-4">
-                <label className="block mb-1">Price:</label>
+                <label className="block mb-2">Price</label>
                 <input
                   type="text"
                   name="price"
                   value={formData.price}
                   onChange={handleChange}
+                  className="border border-gray-300 rounded px-3 py-2 w-full"
                   required
-                  className="border border-gray-300 p-2 w-full"
                 />
+                <small className="text-red-500">
+                  Price should be a positive number formatted to two decimal points (e.g., 13.00).
+                </small>
               </div>
               <div className="mb-4">
-                <label className="block mb-1">Image URL:</label>
+                <label className="block mb-2">Image URL</label>
                 <input
                   type="text"
                   name="image"
                   value={formData.image}
                   onChange={handleChange}
+                  className="border border-gray-300 rounded px-3 py-2 w-full"
                   required
-                  className="border border-gray-300 p-2 w-full"
                 />
               </div>
-              <button type="submit" className="bg-blue-500 text-white py-2 px-4 rounded-lg">
-                {editMode ? 'Update Item' : 'Add Item'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setModalOpen(false)}
-                className="bg-gray-300 text-gray-700 py-2 px-4 rounded-lg ml-2"
-              >
-                Cancel
-              </button>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="bg-gray-300 text-black py-2 px-4 rounded-lg mr-2"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-green-500 text-white py-2 px-4 rounded-lg"
+                >
+                  {editMode ? 'Update' : 'Add'}
+                </button>
+              </div>
             </form>
           </div>
         </div>
