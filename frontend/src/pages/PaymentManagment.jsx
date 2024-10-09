@@ -263,7 +263,7 @@ const PaymentManagement = () => {
                 <td className="border border-gray-300 p-2">
                   {payment.cartItems.map((item, i) => (
                     <div key={i}>
-                      {item.itemName} - ${item.price} x {item.quantity}
+                      {item.Itemname} - ${item.price} x {item.quantity}
                     </div>
                   ))}
                 </td>
@@ -363,7 +363,7 @@ const PaymentManagement = () => {
                     <input
                       type="text"
                       name="itemName"
-                      value={item.itemName}
+                      value={item.Itemname}
                       onChange={(e) => handleCartItemsChange(e, index)}
                       placeholder="Item Name"
                       className="flex-1 border border-gray-300 rounded p-2"
